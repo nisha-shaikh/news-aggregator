@@ -96,18 +96,21 @@ def getRedditResults():
     """
     Gets results from Reddit API with only the fields required
     """
-    reddit = praw.Reddit(client_id="4ZQq_6IHGR6t6A",
-                         client_secret="AmKTDcjfrcxU6yjpSIu4uY7DvCU",
-                         user_agent="testscript by /u/fornewsapi")
-
     results = []
+    try:
+        reddit = praw.Reddit(client_id="4ZQq_6IHGR6t6A",
+                            client_secret="AmKTDcjfrcxU6yjpSIu4uY7DvCU",
+                            user_agent="testscript by /u/fornewsapi")
 
-    for submission in reddit.subreddit("news").top(limit=10):
-        results.append({
-            'headline': submission.title,
-            'link': submission.url,
-            'source': 'reddit'
-        })
+
+        for submission in reddit.subreddit("news").top(limit=10):
+            results.append({
+                'headline': submission.title,
+                'link': submission.url,
+                'source': 'reddit'
+            })
+    except Exception:
+        pass
 
     return results
 
@@ -116,18 +119,21 @@ def getNewsAPIResults():
     """
     Gets results from News API with only the fields required
     """
-    newsapi = NewsApiClient(api_key='cb682c4048944cd1a9f17e88bb3ad67f')
-
     results = []
 
-    us_articles = newsapi.get_top_headlines(category="general", page_size=10)
+    try:
+        newsapi = NewsApiClient(api_key='cb682c4048944cd1a9f17e88bb3ad67f')
 
-    for news in us_articles['articles']:
-        results.append({
-            'headline': news['title'],
-            'link': news['url'],
-            'source': 'newsAPI'
-        })
+        us_articles = newsapi.get_top_headlines(category="general", page_size=10)
+
+        for news in us_articles['articles']:
+            results.append({
+                'headline': news['title'],
+                'link': news['url'],
+                'source': 'newsAPI'
+            })
+    except Exception:
+        pass
 
     return results
 
@@ -136,22 +142,27 @@ def searchRedditResults(keyword, reqEntry):
     """
     Searches for results containing keyword from Reddit API with only the fields required
     """
-    reddit = praw.Reddit(client_id="4ZQq_6IHGR6t6A",
-                         client_secret="AmKTDcjfrcxU6yjpSIu4uY7DvCU",
-                         user_agent="testscript by /u/fornewsapi")
-
     results = []
 
-    for submission in reddit.subreddit("news").search(keyword, limit=10):
-        submissionDict = {'headline': submission.title,
-                          'link': submission.url,
-                          'source': 'reddit'
-                          }
-        results.append(submissionDict)
+    try:
+        reddit = praw.Reddit(client_id="4ZQq_6IHGR6t6A",
+                            client_secret="AmKTDcjfrcxU6yjpSIu4uY7DvCU",
+                            user_agent="testscript by /u/fornewsapi")
 
-        redditEntry = SearchResults(**submissionDict)
-        redditEntry.save()
-        redditEntry.request.add(reqEntry)
+
+        for submission in reddit.subreddit("news").search(keyword, limit=10):
+            submissionDict = {'headline': submission.title,
+                            'link': submission.url,
+                            'source': 'reddit'
+                            }
+            results.append(submissionDict)
+
+            redditEntry = SearchResults(**submissionDict)
+            redditEntry.save()
+            redditEntry.request.add(reqEntry)
+    except Exception:
+        pass
+
     return results
 
 
@@ -159,19 +170,22 @@ def searchNewsAPIResults(keyword, reqEntry):
     """
     Searches for results containing keyword from News API with only the fields required
     """
-    newsapi = NewsApiClient(api_key='cb682c4048944cd1a9f17e88bb3ad67f')
-
     results = []
 
-    for news in newsapi.get_top_headlines(q=keyword, category='general', page_size=10)['articles']:
-        newsDict = {'headline': news['title'],
-                    'link': news['url'],
-                    'source': "newsapi"
-                    }
-        results.append(newsDict)
+    try:
+        newsapi = NewsApiClient(api_key='cb682c4048944cd1a9f17e88bb3ad67f')
 
-        newsEntry = SearchResults(**newsDict)
-        newsEntry.save()
-        newsEntry.request.add(reqEntry)
+        for news in newsapi.get_top_headlines(q=keyword, category='general', page_size=10)['articles']:
+            newsDict = {'headline': news['title'],
+                        'link': news['url'],
+                        'source': "newsapi"
+                        }
+            results.append(newsDict)
+
+            newsEntry = SearchResults(**newsDict)
+            newsEntry.save()
+            newsEntry.request.add(reqEntry)
+    except Exception:
+        pass
 
     return results

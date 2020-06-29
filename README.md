@@ -5,7 +5,7 @@
 To run, use the following commands on command line:
 
 ```
-pip install -r /requirements.txt
+pip install -r requirements.txt
 cd mysite
 python manage.py runserver
 ```
