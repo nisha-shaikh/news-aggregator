@@ -6,7 +6,7 @@
 </head>
 
 <body>
-    <form action="{% url 'news:searchNews' %}" method="POST">
+    <form action="{% url 'news:searchNews'%}" method="POST">
         {% csrf_token %}
         <label for="kw" required>Keyword:</label>
         <input name="kw" id="kw">

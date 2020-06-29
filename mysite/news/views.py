@@ -1,23 +1,29 @@
 import datetime
 import json
+
 from django.core import serializers
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 
 from newsapi import NewsApiClient
 import praw
+
+from .models import SearchRequests, SearchResults
 
 # Create your views here.
 
 #TODO: pagination
 #TODO: formatting
 
+EXP_DATE = datetime.date(2020, 1, 1)
+
+
 def listNews(request):
     results = []
 
     reddit = praw.Reddit(client_id="4ZQq_6IHGR6t6A",
-                        client_secret="AmKTDcjfrcxU6yjpSIu4uY7DvCU",
-                        user_agent="testscript by /u/fornewsapi")
+                         client_secret="AmKTDcjfrcxU6yjpSIu4uY7DvCU",
+                         user_agent="testscript by /u/fornewsapi")
 
     for submission in reddit.subreddit("news").top(limit=10):
         results.append({
@@ -34,7 +40,7 @@ def listNews(request):
         results.append({
             'headline': news['title'],
             'link': news['url'],
-            'source': 'newsAPI'
+            'source': 'newsapi'
         })
 
     # results = {}
@@ -47,42 +53,55 @@ def listNews(request):
     #     'results': results
     # }
 
-    # return render(request, 'news/index.html')
-    return JsonResponse(results, safe=False)
+    return render(request, 'news/index.html')
+    # return JsonResponse(results, safe=False)
 
 
 def searchNews(request):
     if request.method == 'POST':
         reddit = praw.Reddit(client_id="4ZQq_6IHGR6t6A",
-                            client_secret="AmKTDcjfrcxU6yjpSIu4uY7DvCU",
-                            user_agent="testscript by /u/fornewsapi")
-
-        for submission in reddit.subreddit("news").hot(limit=10):
-            print(submission.title)
+                             client_secret="AmKTDcjfrcxU6yjpSIu4uY7DvCU",
+                             user_agent="testscript by /u/fornewsapi")
 
         newsapi = NewsApiClient(api_key='cb682c4048944cd1a9f17e88bb3ad67f')
 
         keyword = request.POST['kw']
-        lang = request.POST['lang']
-        sortBy = request.POST['sort']
-        fromDate = request.POST['from']
-        to = request.POST['to']
-
-        if to=="":
-            to = str(datetime.datetime.today()).split()[0]
-        if fromDate=="":
-            fromDate=None
-        if lang == "":
-            lang=None
 
         results = []
 
-        for i in newsapi.get_everything(q=keyword, from_param=fromDate, to=to, language=lang, sort_by=sortBy)['articles']:
-            results.append({
-                'Headline': i['title'],
-                'Link': i['url'],
-                'Source': i['source']['name'],
-                'Published at': i['publishedAt']
-            })
+        try:
+            fromDB = SearchRequests.objects.get(pk=keyword)
+            print('from db')
+            entryDate = fromDB.dateAdded
+            if entryDate > EXP_DATE:
+                dbResults = list(fromDB.searchresults_set.all().values('headline', 'link', 'source'))
+                return JsonResponse(dbResults, safe=False)
+        except SearchRequests.DoesNotExist:
+            print('from api')
+            reqEntry = SearchRequests(
+                query=keyword, dateAdded=datetime.datetime.today().date())
+            reqEntry.save()
 
-        return JsonResponse(newsapi.get_everything(q=keyword, from_param=fromDate, to=to, language=lang, sort_by=sortBy)['articles'], safe=False)
+            for submission in reddit.subreddit("news").search(keyword, limit=10):
+                submissionDict = {'headline': submission.title,
+                                  'link': submission.url,
+                                  'source': 'reddit'
+                                }
+                results.append(submissionDict)
+
+                redditEntry = SearchResults(**submissionDict)
+                redditEntry.save()
+                redditEntry.request.add(reqEntry)
+
+            for news in newsapi.get_top_headlines(q=keyword, category='general', page_size=10)['articles']:
+                newsDict = {'headline': news['title'],
+                            'link': news['url'],
+                            'source': "newsapi"
+                            }
+                results.append(newsDict)
+
+                newsEntry = SearchResults(**newsDict)
+                newsEntry.save()
+                newsEntry.request.add(reqEntry)
+
+        return JsonResponse(results, safe=False)
