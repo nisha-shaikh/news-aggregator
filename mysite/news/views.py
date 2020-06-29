@@ -14,38 +14,38 @@ from .models import SearchRequests, SearchResults
 
 #TODO: pagination
 #TODO: formatting
-#TODO: clean up code
-#TODO: unit tests
 
-EXP_DATE = datetime.date(2020, 7, 30)
+EXP_DATE = datetime.date(2020, 1, 1)
 
-def listNews(request):
+def searchView(request):
     return render(request, 'news/index.html')
 
+def listNews(request):
+    results = []
+
+    results.extend(getRedditResults())
+    results.extend(getNewsAPIResults())
+
+    return JsonResponse(results, safe=False)
 
 def searchNews(request):
     results = []
     if request.method == 'POST':
-        reddit = praw.Reddit(client_id="4ZQq_6IHGR6t6A",
-                             client_secret="AmKTDcjfrcxU6yjpSIu4uY7DvCU",
-                             user_agent="testscript by /u/fornewsapi")
-
-        newsapi = NewsApiClient(api_key='cb682c4048944cd1a9f17e88bb3ad67f')
-
         keyword = request.POST['kw']
 
         try:
+            # if keyword has already been queried, data will be retrieved from database
             fromDB = SearchRequests.objects.get(pk=keyword)
             entryDate = fromDB.dateAdded
 
             if entryDate > EXP_DATE:
-                print('from db')
-                dbResults = list(fromDB.searchresults_set.all().values('headline', 'link', 'source'))
-                return JsonResponse(dbResults, safe=False)
+                results = list(fromDB.searchresults_set.all().values('headline', 'link', 'source'))
             else:
+                # if data in database is old, call APIs and save again
                 raise AssertionError('old')
+
         except (SearchRequests.DoesNotExist, AssertionError) as e:
-            print('from api')
+            # save query in database
             reqEntry = SearchRequests(
                 query=keyword, dateAdded=datetime.datetime.today().date())
             reqEntry.save()
@@ -54,7 +54,62 @@ def searchNews(request):
                 # delete old news articles from database
                 SearchResults.objects.filter(request=keyword).delete()
 
-            for submission in reddit.subreddit("news").search(keyword, limit=10):
+            results.extend(searchRedditResults(keyword, reqEntry))
+            results.extend(searchNewsAPIResults(keyword, reqEntry))
+
+    return JsonResponse(results, safe=False)
+
+def getRedditResults():
+    """
+    Gets results from Reddit API with only the fields required
+    """
+    reddit = praw.Reddit(client_id="4ZQq_6IHGR6t6A",
+                             client_secret="AmKTDcjfrcxU6yjpSIu4uY7DvCU",
+                             user_agent="testscript by /u/fornewsapi")
+
+        
+    results = []
+
+    for submission in reddit.subreddit("news").top(limit=10):
+        results.append({
+            'headline': submission.title,
+            'link': submission.url,
+            'source': 'reddit'
+        })
+
+    return results
+
+def getNewsAPIResults():
+    """
+    Gets results from News API with only the fields required
+    """
+    newsapi = NewsApiClient(api_key='cb682c4048944cd1a9f17e88bb3ad67f')
+
+    results = []
+
+    us_articles = newsapi.get_top_headlines(category="general", page_size=10)
+
+    for news in us_articles['articles']:
+        results.append({
+            'headline': news['title'],
+            'link': news['url'],
+            'source': 'newsAPI'
+        })
+
+    return results
+
+def searchRedditResults(keyword, reqEntry):
+    """
+    Searches for results containing keyword from Reddit API with only the fields required
+    """
+    reddit = praw.Reddit(client_id="4ZQq_6IHGR6t6A",
+                             client_secret="AmKTDcjfrcxU6yjpSIu4uY7DvCU",
+                             user_agent="testscript by /u/fornewsapi")
+
+        
+    results = []
+
+    for submission in reddit.subreddit("news").search(keyword, limit=10):
                 submissionDict = {'headline': submission.title,
                                   'link': submission.url,
                                   'source': 'reddit'
@@ -64,8 +119,17 @@ def searchNews(request):
                 redditEntry = SearchResults(**submissionDict)
                 redditEntry.save()
                 redditEntry.request.add(reqEntry)
+    return results
 
-            for news in newsapi.get_top_headlines(q=keyword, category='general', page_size=10)['articles']:
+def searchNewsAPIResults(keyword, reqEntry):
+    """
+    Searches for results containing keyword from News API with only the fields required
+    """
+    newsapi = NewsApiClient(api_key='cb682c4048944cd1a9f17e88bb3ad67f')
+
+    results = []
+
+    for news in newsapi.get_top_headlines(q=keyword, category='general', page_size=10)['articles']:
                 newsDict = {'headline': news['title'],
                             'link': news['url'],
                             'source': "newsapi"
@@ -75,5 +139,5 @@ def searchNews(request):
                 newsEntry = SearchResults(**newsDict)
                 newsEntry.save()
                 newsEntry.request.add(reqEntry)
-
-    return JsonResponse(results, safe=False)
+    
+    return results

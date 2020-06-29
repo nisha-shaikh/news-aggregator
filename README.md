@@ -1,6 +1,6 @@
 # News Aggregator
 
-### Description
+### How to Run
 
 For this assignment you have to implement an application that aggregates news from two different APIs. The APIs you’ll be using are Reddit and [News API](https://newsapi.org/). This application should be running on your localhost and serve the result in JSON format from an endpoint whenever it gets a request. You are allowed to use 3rd party wrappers of these APIs.
 
