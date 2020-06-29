@@ -7,7 +7,7 @@ from news.models import SearchResults, SearchRequests
 
 # Create your tests here.
 
-class searchNewsView(TestCase):
+class searchView(TestCase):
 
     def testAddToDB(self):
         """

@@ -1,0 +1,51 @@
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title></title>
+</head>
+
+<style>
+    html,
+    body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+    }
+
+    form {
+        border: 0.5px solid gray;
+        padding: 50px;
+        margin: auto;
+        text-align: center;
+    }
+
+    form> :nth-child(4) {
+        margin: 5px;
+    }
+
+    ul {
+        list-style-type: none;
+        border-bottom: 0.5px solid gray;
+    }
+</style>
+
+<body>
+    <form action="{% url 'news:searchNewsOnHTML'%}" method="POST">
+        {% csrf_token %}
+        <label for="kw" required>Type the phrase you want to search for:</label><br>
+        <input name="kw" id="kw"><br>
+        <input type="submit" value="Search">
+    </form>
+    <div id="results">
+        {% for i in results %}
+        <ul>
+            <li>{{i.headline}}</li>
+            <li><a href="{{i.link}}">{{i.link}}</a></li>
+            <li>{{i.source}}</li>
+        </ul>
+        {% endfor %}
+    </div>
+</body>
+
+</html>

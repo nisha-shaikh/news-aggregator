@@ -5,13 +5,39 @@
     <title></title>
 </head>
 
+<style>
+    html,
+    body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+    }
+
+    body {
+        display: flex;
+    }
+
+    form {
+        border: 0.5px solid gray;
+        padding: 50px;
+        margin: auto;
+        text-align: center;
+    }
+
+    form > :nth-child(4) {
+        margin: 5px;
+    }
+</style>
+
 <body>
-    <form action="{% url 'news:searchNews'%}" method="POST">
-        {% csrf_token %}
-        <label for="kw" required>Keyword:</label>
-        <input name="kw" id="kw">
-        <input type="submit" value="Search">
-    </form>
+    
+        <form action="{% url 'news:searchNews'%}" method="POST">
+            {% csrf_token %}
+            <label for="kw" required>Type the phrase you want to search for:</label><br>
+            <input name="kw" id="kw"><br>
+            <input type="submit" value="Search">
+        </form>
+    
 </body>
 
 </html>
