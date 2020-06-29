@@ -15,9 +15,9 @@ from .models import SearchRequests, SearchResults
 #TODO: pagination
 #TODO: formatting
 #TODO: clean up code
+#TODO: unit tests
 
-EXP_DATE = datetime.date(2020, 1, 1)
-
+EXP_DATE = datetime.date(2020, 7, 30)
 
 def listNews(request):
     return render(request, 'news/index.html')
@@ -37,16 +37,23 @@ def searchNews(request):
 
         try:
             fromDB = SearchRequests.objects.get(pk=keyword)
-            print('from db')
             entryDate = fromDB.dateAdded
+
             if entryDate > EXP_DATE:
+                print('from db')
                 dbResults = list(fromDB.searchresults_set.all().values('headline', 'link', 'source'))
                 return JsonResponse(dbResults, safe=False)
-        except SearchRequests.DoesNotExist:
+            else:
+                raise AssertionError('old')
+        except (SearchRequests.DoesNotExist, AssertionError) as e:
             print('from api')
             reqEntry = SearchRequests(
                 query=keyword, dateAdded=datetime.datetime.today().date())
             reqEntry.save()
+
+            if str(e) == 'old':
+                # delete old news articles from database
+                SearchResults.objects.filter(request=keyword).delete()
 
             for submission in reddit.subreddit("news").search(keyword, limit=10):
                 submissionDict = {'headline': submission.title,
@@ -70,4 +77,4 @@ def searchNews(request):
                 newsEntry.save()
                 newsEntry.request.add(reqEntry)
 
-        return JsonResponse(results, safe=False)
+            return JsonResponse(results, safe=False)
