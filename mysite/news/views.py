@@ -24,6 +24,7 @@ def listNews(request):
 
 
 def searchNews(request):
+    results = []
     if request.method == 'POST':
         reddit = praw.Reddit(client_id="4ZQq_6IHGR6t6A",
                              client_secret="AmKTDcjfrcxU6yjpSIu4uY7DvCU",
@@ -32,8 +33,6 @@ def searchNews(request):
         newsapi = NewsApiClient(api_key='cb682c4048944cd1a9f17e88bb3ad67f')
 
         keyword = request.POST['kw']
-
-        results = []
 
         try:
             fromDB = SearchRequests.objects.get(pk=keyword)
@@ -77,4 +76,4 @@ def searchNews(request):
                 newsEntry.save()
                 newsEntry.request.add(reqEntry)
 
-            return JsonResponse(results, safe=False)
+    return JsonResponse(results, safe=False)
